@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Travel Log</title>
+    
+    <!-- Modern Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <!-- Google Charts -->
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --accent-color: #2563eb; /* Royal Blue */
+            --accent-light: #eff6ff;
+            --border-color: #e5e7eb;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Header & Stats */
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        h1 {
+            font-weight: 800;
+            font-size: 2.5rem;
+            letter-spacing: -1px;
+            margin-bottom: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--accent-color);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Map Section */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            margin-bottom: 40px;
+            border: 1px solid var(--border-color);
+        }
+
+        .card-header {
+            padding: 20px 30px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-header h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        #map-container {
+            width: 100%;
+            height: 500px;
+        }
+
+        /* Timeline Section */
+        .timeline {
+            position: relative;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px 0;
+        }
+
+        /* Vertical Line */
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 24px; /* Position of the line */
+            width: 2px;
+            background: var(--border-color);
+        }
+
+        .trip-entry {
+            position: relative;
+            margin-bottom: 40px;
+            padding-left: 60px; /* Space for the dot */
+        }
+
+        /* The Dot */
+        .trip-entry::before {
+            content: '';
+            position: absolute;
+            left: 15px; /* (24px line - 20px dot) / 2 centered roughly */
+            top: 0;
+            width: 16px;
+            height: 16px;
+            background: var(--card-bg);
+            border: 4px solid var(--accent-color);
+            border-radius: 50%;
+            z-index: 2;
+        }
+
+        .trip-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: transform 0.2s ease;
+        }
+
+        .trip-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .trip-date {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .trip-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin: 0 0 10px 0;
+        }
+
+        .trip-desc {
+            color: var(--text-secondary);
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        /* Loading State */
+        #loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <div id="loading">Fetching travel data...</div>
+
+    <div id="app-content" style="display:none;">
+        <header>
+            <h1>Travel Log</h1>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-number" id="stat-countries">0</span>
+                    <span class="stat-label">Countries</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="stat-trips">0</span>
+                    <span class="stat-label">Total Trips</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Map -->
+        <div class="card">
+            <div class="card-header">
+                <h2>World Map</h2>
+            </div>
+            <div id="map-container"></div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="timeline" id="timeline-container">
+            <!-- Trips injected here -->
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // ---------------------------------------------------------
+    // CONFIGURATION
+    // ---------------------------------------------------------
+    const DATA_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRoALl2xCnL0htGyMkxHL26pZz24DpJPRE8xgkYc30p8cl0oh0XYD_yExCCx171_GgxrtFI4ogvK7XP/pub?output=csv";
+
+    // ---------------------------------------------------------
+    // INITIALIZATION
+    // ---------------------------------------------------------
+    google.charts.load('current', { 'packages':['geochart'] });
+    
+    // Wait for both window load and google charts
+    window.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const rawData = await fetchCSV(DATA_URL);
+            const trips = parseCSV(rawData);
+            
+            // Sort trips: Newest first
+            trips.sort((a, b) => new Date(b.Start) - new Date(a.Start));
+
+            // Initialize App
+            updateStats(trips);
+            renderTimeline(trips);
+            
+            // Draw map once Google Charts is ready
+            google.charts.setOnLoadCallback(() => {
+                drawMap(trips);
+            });
+
+            // Show content, hide loader
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('app-content').style.display = 'block';
+
+        } catch (error) {
+            document.getElementById('loading').innerText = "Error loading data. Please check the console.";
+            console.error(error);
+        }
+    });
+
+    // ---------------------------------------------------------
+    // LOGIC & RENDERERS
+    // ---------------------------------------------------------
+
+    async function fetchCSV(url) {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Network response was not ok");
+        return await response.text();
+    }
+
+    // Simple CSV Parser (Handles commas in quotes)
+    function parseCSV(str) {
+        const arr = [];
+        let quote = false;  // 'true' means we're inside a quoted field
+
+        // Iterate over each character, keep track of current row and col
+        // This regex splits by comma ONLY if not inside quotes
+        // Note: This is a basic parser. For heavy production, use PapaParse.
+        const lines = str.trim().split("\n");
+        const headers = lines[0].split(",").map(h => h.trim()); // Assumes headers don't have commas
+
+        for (let i = 1; i < lines.length; i++) {
+            const currentLine = lines[i];
+            
+            // Regex to match CSV columns including quoted strings
+            const regex = /(?:^|,)(\"(?:[^\"]|\"\")*\"|[^,]*)/g;
+            let match;
+            const rowData = {};
+            let colIndex = 0;
+
+            while (match = regex.exec(currentLine)) {
+                let val = match[1];
+                // Remove leading/trailing quotes and unescape double quotes
+                if (val.length > 0 && val.charAt(0) === '"') {
+                    val = val.substring(1, val.length - 1).replace(/""/g, '"');
+                }
+                if(colIndex < headers.length) {
+                    rowData[headers[colIndex]] = val.trim();
+                }
+                colIndex++;
+            }
+            if(Object.keys(rowData).length > 0) arr.push(rowData);
+        }
+        return arr;
+    }
+
+    function updateStats(trips) {
+        const uniqueCountries = [...new Set(trips.map(t => t.Country))];
+        
+        // Animation effect for numbers
+        animateValue("stat-countries", 0, uniqueCountries.length, 1000);
+        animateValue("stat-trips", 0, trips.length, 1000);
+    }
+
+    function renderTimeline(trips) {
+        const container = document.getElementById('timeline-container');
+        let html = '';
+
+        trips.forEach(trip => {
+            // Format date to look nice (e.g., "Oct 2023")
+            const dateObj = new Date(trip.Start);
+            const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            
+            html += `
+                <div class="trip-entry">
+                    <div class="trip-card">
+                        <div class="trip-date">${dateStr}</div>
+                        <div class="trip-title">${trip.Country}</div>
+                        <p class="trip-desc">${trip.Note || ''}</p>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    function drawMap(trips) {
+        const mapData = [['Country', 'Info']];
+        
+        // Group by country to handle multiple trips to same place
+        const countryGroups = {};
+        trips.forEach(trip => {
+            if(!countryGroups[trip.Country]) countryGroups[trip.Country] = 0;
+            countryGroups[trip.Country]++;
+        });
+
+        for (const [country, count] of Object.entries(countryGroups)) {
+            const label = count === 1 ? '1 Trip' : `${count} Trips`;
+            mapData.push([country, label]);
+        }
+
+        const data = google.visualization.arrayToDataTable(mapData);
+
+        const options = {
+            colorAxis: {colors: ['#2563eb']},
+            backgroundColor: '#ffffff',
+            datalessRegionColor: '#f3f4f6',
+            defaultColor: '#2563eb',
+            legend: 'none',
+            tooltip: { trigger: 'focus', isHtml: true }
+        };
+
+        const chart = new google.visualization.GeoChart(document.getElementById('map-container'));
+        chart.draw(data, options);
+        
+        // Redraw on resize
+        window.addEventListener('resize', () => chart.draw(data, options));
+    }
+
+    // Helper for number animation
+    function animateValue(id, start, end, duration) {
+        const obj = document.getElementById(id);
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            obj.innerHTML = Math.floor(progress * (end - start) + start);
+            if (progress < 1) {
+                window.requestAnimationFrame(step);
+            }
+        };
+        window.requestAnimationFrame(step);
+    }
+</script>
+</body>
+</html>
